@@ -53,6 +53,7 @@ except ImportError:
 import datagen
 import juliet_memnet
 import utils
+import operator
 
 NUM_MODELS_PER_EXPERIMENT = 10
 NUM_EXPER = len(constants.VALIDATION_MODELS_SUBDIRS)
@@ -416,8 +417,13 @@ def get_memnet_predics(working_dir, models_dir, fnames=None, line_num=None):
         line_num = line_num - 2
 
     val_data_generator = datagen.DataGenerator(working_dir=working_dir)
+    total_accuracy = 0
+    accuracy = 0
+    num = 0
 
     for fname in fnames:
+        num = num+1
+        accuracy = 0
         print("fname: {}".format(fname))
 
         # get file number
@@ -454,6 +460,14 @@ def get_memnet_predics(working_dir, models_dir, fnames=None, line_num=None):
 
         print("labels: {}".format(y_true))
         print("predics: {}".format(separate_predics))
+        #list_true = list(y_true)
+        for item in separate_predics:
+            if not (y_true-np.array(item)).all():
+                accuracy = accuracy+0.1
+        total_accuracy = ((total_accuracy*(num-1))+accuracy)/num
+        print("accuracy for this file: {}".format(accuracy))
+    print("----------------------------------finally-----------------------------------")
+    print("total test accuracy: {}".format(total_accuracy))
 
 
 if __name__ == '__main__':
@@ -465,7 +479,7 @@ if __name__ == '__main__':
                               constants.VALIDATION_MODELS_SUBDIRS[-1])
     predics_subdir = os.path.join(constants.VALIDATION_PREDICS_PARENT_DIR,
                                   constants.VALIDATION_PREDICS_SUBDIRS[-1])
-    analyze_train_set_size( do_print_confusions=True )
-    evaluate_oneoff(working_dir, models_dir, predics_subdir,
-                    False, False, False)
+    #analyze_train_set_size( do_print_confusions=True )
+    #evaluate_oneoff(working_dir, models_dir, predics_subdir,
+    #               False, False, False)
     get_memnet_predics(working_dir, models_dir)
