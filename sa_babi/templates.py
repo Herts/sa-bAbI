@@ -38,86 +38,29 @@
 # 
 """templates.py: Templates for SA-bAbI code generation"""
 
-BUFWRITE_LINES = ["$buf_var[$idx_var] = '$char';"]
-
+SIZE_T_NUM_DIFF = ["$buf_var -= $idx_var;"]
 # templates for functions without free variables
 
-COND_DEC_INIT_PAIRS = [
-    ("char $buf_var[$buf_len];", None),
-    ("int $idx_var;", "$idx_var = $idx_init;"),
+NORMAL_DIFF_INIT_PAIRS = [
+    ("size_t $buf_var;", "$buf_var = $buf_len;"),
+    ("size_t $idx_var;", "$idx_var = $idx_init;")
+]
+
+NORMAL_DIFF_MAIN_LINES = [
+    "$buf_var -= $idx_var;"
+]
+
+COND_DIFF_INIT_PAIRS = [
+    ("size_t $buf_var;", "$buf_var = $buf_len;"),
+    ("size_t $idx_var;", "$idx_var = $idx_init;"),
     ("int $thresh_var;", "$thresh_var = $thresh;")
 ]
-COND_MAIN_LINES = [
+
+COND_DIFF_MAIN_LINES = [
     "if($idx_var < $thresh_var){",
     "$idx_var = $true_idx;",
     "} else {",
     "$idx_var = $false_idx;",
-    "}"
-]
-
-WHILE_DEC_INIT_PAIRS = [
-    ("char $buf_var[$buf_len];", None),
-    ("int $idx_var;", "$idx_var = $idx_init;"),
-    ("int $max_var;", "$max_var = $max_idx;")
-]
-WHILE_MAIN_LINES = [
-    "while($idx_var < $max_var){",
-    "$idx_var++;",
-    "}"
-]
-
-FOR_DEC_INIT_PAIRS = [
-    ("char $buf_var[$buf_len];", None),
-    ("int $idx_var;", None),
-    ("int $max_var;", "$max_var = $max_idx;")
-]
-FOR_MAIN_LINES = [
-    "for($idx_var = $idx_init; $idx_var < $max_var; $idx_var++){",
-    "}"
-]
-
-# templates for functions with one free variable
-
-COND_FV_DEC_INIT_PAIRS = [
-    ("int $idx_var;", "$idx_var = rand();"),
-    ("char $buf_var[$buf_len];", None),
-    ("int $chk_var;", "$chk_var = $chk;")
-]
-COND_FV_MAIN_LINES = [
-    "if($idx_var < $chk_var){",
-    "} else {",
-    "$idx_var = $false_idx;",
-    "}"
-]
-
-WHILE_FV_DEC_INIT_PAIRS = [
-    ("char $buf_var[$buf_len];", None),
-    ("int $idx_var;", "$idx_var = $idx_init;"),
-    ("int $chk_var;", "$chk_var = $chk;"),
-    ("int $max_var;", "$max_var = rand();")
-]
-WHILE_FV_MAIN_LINES = [
-    "if ($max_var < $chk_var){",
-    "} else {",
-    "$max_var = $false_idx;",
-    "}",
-    "while($idx_var < $max_var){",
-    "$idx_var++;",
-    "}"
-]
-
-FOR_FV_DEC_INIT_PAIRS = [
-    ("char $buf_var[$buf_len];", None),
-    ("int $idx_var;", None),
-    ("int $chk_var;", "$chk_var = $chk;"),
-    ("int $max_var;", "$max_var = rand();")
-]
-FOR_FV_MAIN_LINES = [
-    "if ($max_var < $chk_var){",
-    "} else {",
-    "$max_var = $false_idx;",
-    "}",
-    "for($idx_var = $idx_init; $idx_var < $max_var; $idx_var++){",
     "}"
 ]
 

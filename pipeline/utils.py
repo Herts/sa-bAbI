@@ -159,7 +159,7 @@ def generate_sa_data(working_dir=constants.WORKING_DIR_SA_DATA,
     unique_elements = set(lab for line in labels for lab in line)
     tautonly_elements = [
         itm.value for itm in
-        [Tag.OTHER, Tag.BODY, Tag.BUFWRITE_TAUT_SAFE, Tag.BUFWRITE_TAUT_UNSAFE]]
+        [Tag.OTHER, Tag.BODY, Tag.SIZE_T_TAUT_SAFE, Tag.SIZE_T_TAUT_UNSAFE]]
     is_tautonly = unique_elements == set(tautonly_elements)
 
     if coarse_labels or is_tautonly:
@@ -772,12 +772,12 @@ def _test_get_sa_tags():
     sa_tags = get_sa_tags(src_file)
     assert(len(sa_tags) == 26)
     assert(sa_tags[-8:] == [
-            Tag.BUFWRITE_COND_SAFE,
+            Tag.SIZE_T_COND_SAFE,
             Tag.BODY,
             Tag.BODY,
             Tag.BODY,
-            Tag.BUFWRITE_TAUT_UNSAFE,
-            Tag.BUFWRITE_TAUT_SAFE,
+            Tag.SIZE_T_TAUT_UNSAFE,
+            Tag.SIZE_T_TAUT_SAFE,
             Tag.BODY,
             Tag.OTHER
         ])

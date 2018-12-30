@@ -63,11 +63,13 @@ class Tag(enum.Enum):
     OTHER = 0
     # Lines inside body that aren't buffer writes
     BODY = 1
-    # Buffer write that requires control flow analysis to prove safe
-    BUFWRITE_COND_SAFE = 2
-    # Buffer write that requires control flow analysis to prove unsafe
-    BUFWRITE_COND_UNSAFE = 3
-    # Buffer write that is provably safe even without control flow
-    BUFWRITE_TAUT_SAFE = 4
-    # Buffer write that is provably unsafe even without control flow
-    BUFWRITE_TAUT_UNSAFE = 5
+
+    # Unsigned int that requires control flow analysis to prove safe
+    SIZE_T_COND_SAFE = 2
+    # Unsigned int that requires control flow analysis to prove unsafe
+    SIZE_T_COND_UNSAFE = 3
+    # Unsigned int that is provably safe even without control flow
+    SIZE_T_TAUT_SAFE = 4
+    # Unsigned int that is provably unsafe even without control flow
+    SIZE_T_TAUT_UNSAFE = 5
+

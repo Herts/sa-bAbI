@@ -49,10 +49,10 @@ import json
 import templates
 
 # TODO: move away from this ugly hack by merging the conda enviroment in pipeline/ into Docker
-#sys_path_parent = os.path.abspath('..')
-#if sys_path_parent not in sys.path:
+# sys_path_parent = os.path.abspath('..')
+# if sys_path_parent not in sys.path:
 #    sys.path.append(sys_path_parent)
-#from classes.sa_tag import Tag
+# from classes.sa_tag import Tag
 from sa_tag import Tag
 
 # maximum number of variable names
@@ -74,7 +74,7 @@ FNAME_HASHLEN = 5
 
 # command-line argument default values
 # number of instances to generate
-DEFAULT_NUM_INSTANCES = 12000
+DEFAULT_NUM_INSTANCES = 200
 # random seed
 DEFAULT_SEED = 0
 
@@ -106,11 +106,9 @@ def main(args):
     # set seed
     if seed != -1:
         random.seed(seed)
+    # Using templates
+    generators = [gen_cond_example]
 
-    generators = [gen_cond_example, gen_while_example, gen_for_example,
-                  gen_fv_cond_example, gen_fv_while_example, gen_fv_for_example]
-    if linear_only:
-        generators = [gen_tautonly_linear_example]
     num_generators = len(generators)
 
     # Generate metadata only if the metadata_file argument is present
@@ -122,19 +120,14 @@ def main(args):
     while inst_num < num_instances:
         # generate example
         gen = generators[inst_num % num_generators]
-        if gen is gen_tautonly_linear_example:
-            instance_str, tags = gen()
-        else:
-            include_cond_bufwrite = not taut_only
-            instance_str, tags = gen(
-                include_cond_bufwrite=include_cond_bufwrite)
+        instance_str, tags = gen()
 
         # generate filename
         byte_obj = bytes(instance_str, 'utf-8')
         fname = hashlib.shake_128(byte_obj).hexdigest(FNAME_HASHLEN)
         fname = "{}.c".format(fname)
         if fname in tag_metadata:
-	    # Collision, try again
+            # Collision, try again
             continue
 
         # insert record into metadata for this c file
@@ -174,7 +167,6 @@ def gen_cond_example(include_cond_bufwrite=True):
     buf_len = random.randrange(MAX_IDX)
     true_idx = random.randrange(MAX_IDX)
     false_idx = random.randrange(MAX_IDX)
-    char = _get_char()
     substitutions = {
         'buf_var': buf_var,
         'idx_var': idx_var,
@@ -183,180 +175,13 @@ def gen_cond_example(include_cond_bufwrite=True):
         'thresh_var': thresh_var,
         'idx_init': idx_init,
         'true_idx': true_idx,
-        'false_idx': false_idx,
-        'char': char
+        'false_idx': false_idx
     }
-    main_lines = templates.COND_MAIN_LINES
+    main_lines = templates.COND_DIFF_MAIN_LINES
     cond = idx_init < thresh
     safe = ((cond and (true_idx < buf_len)) or
             (not cond and (false_idx < buf_len)))
-    dec_init_pairs = templates.COND_DEC_INIT_PAIRS
-
-    return _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
-                                     safe, substitutions,
-                                     include_cond_bufwrite)
-
-
-def gen_while_example(include_cond_bufwrite=True):
-    """Generate while-loop example
-
-    Returns:
-        instance_str (str): str of code example
-        tags (list of Tag): tag for each line representing buffer safety
-    """
-    anon_vars = _get_anon_vars()
-    buf_var, idx_var, max_var = anon_vars[:3]
-    dummy_vars = anon_vars[3:]
-    buf_len = random.randrange(MAX_IDX)
-    idx_init = random.randrange(MAX_IDX)
-    max_idx = random.randrange(MAX_IDX)
-    char = _get_char()
-    substitutions = {
-        'buf_var': buf_var,
-        'idx_var': idx_var,
-        'max_var': max_var,
-        'buf_len': buf_len,
-        'idx_init': idx_init,
-        'max_idx': max_idx,
-        'char': char
-    }
-    main_lines = templates.WHILE_MAIN_LINES
-    safe = max(idx_init, max_idx) < buf_len
-    dec_init_pairs = templates.WHILE_DEC_INIT_PAIRS
-
-    return _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
-                                     safe, substitutions,
-                                     include_cond_bufwrite)
-
-
-def gen_for_example(include_cond_bufwrite=True):
-    """Generate for-loop example
-
-    Returns:
-        instance_str (str): str of code example
-        tags (list of Tag): tag for each line representing buffer safety
-    """
-    anon_vars = _get_anon_vars()
-    buf_var, idx_var, max_var = anon_vars[:3]
-    dummy_vars = anon_vars[3:]
-    buf_len = random.randrange(MAX_IDX)
-    idx_init = random.randrange(MAX_IDX)
-    max_idx = random.randrange(MAX_IDX)
-    char = _get_char()
-    substitutions = {
-        'buf_var': buf_var,
-        'idx_var': idx_var,
-        'max_var': max_var,
-        'buf_len': buf_len,
-        'idx_init': idx_init,
-        'max_idx': max_idx,
-        'char': char
-    }
-    main_lines = templates.FOR_MAIN_LINES
-    safe = max(idx_init, max_idx) < buf_len
-    dec_init_pairs = templates.FOR_DEC_INIT_PAIRS
-
-    return _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
-                                     safe, substitutions,
-                                     include_cond_bufwrite)
-
-
-def gen_fv_cond_example(include_cond_bufwrite=True):
-    """Generate conditional example with free variable
-
-    Returns:
-        instance_str (str): str of code example
-        tags (list of Tag): tag for each line representing buffer safety
-    """
-    anon_vars = _get_anon_vars()
-    buf_var, idx_var, chk_var = anon_vars[:3]
-    dummy_vars = anon_vars[3:]
-    chk = random.randrange(MAX_IDX)
-    buf_len = random.randrange(MAX_IDX)
-    false_idx = random.randrange(MAX_IDX)
-    char = _get_char()
-    substitutions = {
-        'buf_var': buf_var,
-        'idx_var': idx_var,
-        'buf_len': buf_len,
-        'chk_var': chk_var,
-        'chk': chk,
-        'false_idx': false_idx,
-        'char': char
-    }
-    main_lines = templates.COND_FV_MAIN_LINES
-    safe = max(chk - 1, false_idx) < buf_len
-    dec_init_pairs = templates.COND_FV_DEC_INIT_PAIRS
-
-    return _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
-                                     safe, substitutions,
-                                     include_cond_bufwrite)
-
-
-def gen_fv_while_example(include_cond_bufwrite=True):
-    """Generate while-loop example with one free variable
-
-    Returns:
-        instance_str (str): str of code example
-        tags (list of Tag): tag for each line representing buffer safety
-    """
-    anon_vars = _get_anon_vars()
-    buf_var, idx_var, max_var, chk_var = anon_vars[:4]
-    dummy_vars = anon_vars[4:]
-    chk = random.randrange(MAX_IDX)
-    buf_len = random.randrange(MAX_IDX)
-    false_idx = random.randrange(MAX_IDX)
-    idx_init = random.randrange(MAX_IDX)
-    char = _get_char()
-    substitutions = {
-        'buf_var': buf_var,
-        'idx_var': idx_var,
-        'max_var': max_var,
-        'chk_var': chk_var,
-        'chk': chk,
-        'buf_len': buf_len,
-        'idx_init': idx_init,
-        'false_idx': false_idx,
-        'char': char
-    }
-    main_lines = templates.WHILE_FV_MAIN_LINES
-    safe = max(chk - 1, false_idx, idx_init) < buf_len
-    dec_init_pairs = templates.WHILE_FV_DEC_INIT_PAIRS
-
-    return _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
-                                     safe, substitutions,
-                                     include_cond_bufwrite)
-
-
-def gen_fv_for_example(include_cond_bufwrite=True):
-    """Generate for-loop example with one free variable
-
-    Returns:
-        instance_str (str): str of code example
-        tags (list of Tag): tag for each line representing buffer safety
-    """
-    anon_vars = _get_anon_vars()
-    buf_var, idx_var, max_var, chk_var = anon_vars[:4]
-    dummy_vars = anon_vars[4:]
-    chk = random.randrange(MAX_IDX)
-    buf_len = random.randrange(MAX_IDX)
-    false_idx = random.randrange(MAX_IDX)
-    idx_init = random.randrange(MAX_IDX)
-    char = _get_char()
-    substitutions = {
-        'buf_var': buf_var,
-        'idx_var': idx_var,
-        'max_var': max_var,
-        'chk_var': chk_var,
-        'chk': chk,
-        'buf_len': buf_len,
-        'idx_init': idx_init,
-        'false_idx': false_idx,
-        'char': char
-    }
-    main_lines = templates.FOR_FV_MAIN_LINES
-    safe = max(chk - 1, false_idx, idx_init) < buf_len
-    dec_init_pairs = templates.FOR_FV_DEC_INIT_PAIRS
+    dec_init_pairs = templates.COND_DIFF_INIT_PAIRS
 
     return _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
                                      safe, substitutions,
@@ -405,12 +230,10 @@ def _assemble_general_example(dec_init_pairs, main_lines, dummy_vars,
     Ensures:
         len(instance_str.split("\n")) == len(tags)
     """
-    if include_cond_bufwrite:
-        # copy to avoid changing the template list due to aliasing
-        main_lines = main_lines[:]
-        main_lines += templates.BUFWRITE_LINES
-    else:
-        safe = None
+
+    # copy to avoid changing the template list due to aliasing
+    main_lines = main_lines[:]
+    main_lines += templates.SIZE_T_NUM_DIFF
 
     lines, body_tags = _get_lines(dec_init_pairs, main_lines,
                                   dummy_vars, safe, include_cond_bufwrite)
@@ -450,16 +273,6 @@ def _get_full_template(setup_lines, partial_template):
     return full_template
 
 
-def _get_char():
-    """Get a random single character
-
-    Returns:
-        char (str): random single character from charset
-    """
-    char = random.choice(CHARSET)
-    return char
-
-
 def _get_lines(dec_init_pairs, main_lines, dummy_vars, safe,
                include_cond_bufwrite):
     """Create full body lines with setup, main content, and dummy interaction
@@ -483,7 +296,7 @@ def _get_lines(dec_init_pairs, main_lines, dummy_vars, safe,
     # construct body tags before adding dummies
     body_tags = [Tag.BODY for _ in lines]
     if include_cond_bufwrite:
-        query_tag = Tag.BUFWRITE_COND_SAFE if safe else Tag.BUFWRITE_COND_UNSAFE
+        query_tag = Tag.SIZE_T_COND_SAFE if safe else Tag.SIZE_T_COND_UNSAFE
         body_tags[-1] = query_tag
 
     min_num_dummies = 0 if include_cond_bufwrite else MIN_NUM_DUMMIES_TAUTONLY
@@ -562,8 +375,8 @@ def _insert_dummies(setup_lines, main_lines, dummy_vars, num_dummies,
     for _ in range(num_dummies):
         (lines, dummy_vars, body_tags, control_flow_start, control_flow_end
          ) = _insert_referential_dummy(
-                lines, dummy_vars, body_tags, control_flow_start,
-                control_flow_end)
+            lines, dummy_vars, body_tags, control_flow_start,
+            control_flow_end)
 
     return lines, body_tags
 
@@ -609,18 +422,21 @@ def _insert_referential_dummy(lines, dummy_vars, body_tags,
 
     dum_buf_var = dummy_vars.pop()
     dum_int_var = dummy_vars.pop()
-    buf_dec_line = "char %s[%s];" % (dum_buf_var, dum_len)
+
+    buf_dec_line = "size_t %s;" % (dum_buf_var)
+    buf_init_line = "%s = %s;" % (dum_buf_var, dum_len)
+
     idx_dec_line = "int %s;" % dum_int_var
     idx_init_line = "%s = %s;" % (dum_int_var, dum_idx)
-    buf_set_line = "%s[%s] = '%s';" % (dum_buf_var, dum_int_var,
-                                       random.choice(CHARSET))
+
+    buf_set_line = "%s -= %s;" % (dum_buf_var, dum_int_var)
 
     # idx declaration must go before idx initialization
     setup_lines = [idx_dec_line, idx_init_line]
     # buffer declaration can go anywhere between them
     buf_dec_idx = random.randrange(3)
     setup_lines = (setup_lines[:buf_dec_idx] + [buf_dec_line] +
-                   setup_lines[buf_dec_idx:])
+                   [buf_init_line] + setup_lines[buf_dec_idx:])
 
     # whether these setup lines go before the control flow lines
     before_control_flow = random.choice([True, False])
@@ -633,7 +449,7 @@ def _insert_referential_dummy(lines, dummy_vars, body_tags,
 
     # lines where buffer and index are declared; index is initialized
     setup_idxes = sorted([random.randrange(range_start, range_end)
-                          for _ in range(3)])
+                          for _ in range(4)])
     # line where buffer is set
     buf_set_idx = random.randrange(max(setup_idxes), len(lines) + 1)
 
@@ -652,16 +468,18 @@ def _insert_referential_dummy(lines, dummy_vars, body_tags,
     lines = (lines[:setup_idxes[0]] + [setup_lines[0]] +
              lines[setup_idxes[0]:setup_idxes[1]] + [setup_lines[1]] +
              lines[setup_idxes[1]:setup_idxes[2]] + [setup_lines[2]] +
-             lines[setup_idxes[2]:buf_set_idx] + [buf_set_line] +
+             lines[setup_idxes[2]:setup_idxes[3]] + [setup_lines[3]] +
+             lines[setup_idxes[3]:buf_set_idx] + [buf_set_line] +
              lines[buf_set_idx:])
 
     safe = dum_idx < dum_len
-    bufwrite_tag = Tag.BUFWRITE_TAUT_SAFE if safe else Tag.BUFWRITE_TAUT_UNSAFE
+    size_t_tag = Tag.SIZE_T_TAUT_SAFE if safe else Tag.SIZE_T_TAUT_UNSAFE
 
     body_tags = (body_tags[:setup_idxes[0]] + [Tag.BODY] +
                  body_tags[setup_idxes[0]:setup_idxes[1]] + [Tag.BODY] +
                  body_tags[setup_idxes[1]:setup_idxes[2]] + [Tag.BODY] +
-                 body_tags[setup_idxes[2]:buf_set_idx] + [bufwrite_tag] +
+                 body_tags[setup_idxes[2]:setup_idxes[3]] + [Tag.BODY] +
+                 body_tags[setup_idxes[3]:buf_set_idx] + [size_t_tag] +
                  body_tags[buf_set_idx:])
 
     return lines, dummy_vars, body_tags, control_flow_start, control_flow_end
@@ -715,59 +533,6 @@ def _get_tags(body_tags):
     return tags
 
 
-def _test(verbose=False):
-    """Test minimally that each generator creates code
-
-    Args:
-        verbose (bool): if True, print generated code example
-    """
-    num_tests_each = 10
-
-    def run_tests(gen, kwargs=None):
-        for test_num in range(num_tests_each):
-            if kwargs is None:
-                instance_str, tags = gen()
-            else:
-                instance_str, tags = gen(**kwargs)
-
-            if verbose and test_num == 0:
-                if kwargs is not None:
-                    print("{} {}".format(gen.__name__, kwargs))
-                else:
-                    print(gen.__name__)
-                print(instance_str + "\n")
-
-            assert(isinstance(instance_str, str))
-            assert(isinstance(tags, list))
-            for itm in tags:
-                assert(isinstance(itm, Tag))
-
-            cond_in_tags = (Tag.BUFWRITE_COND_UNSAFE in tags or
-                            Tag.BUFWRITE_COND_SAFE in tags)
-            taut_in_tags = (Tag.BUFWRITE_TAUT_UNSAFE in tags or
-                            Tag.BUFWRITE_TAUT_SAFE in tags)
-
-            if kwargs is not None:
-                if kwargs['include_cond_bufwrite']:
-                    assert cond_in_tags
-                else:
-                    assert(not cond_in_tags)
-                    assert taut_in_tags
-            else:
-                assert taut_in_tags
-
-    for gen in [gen_cond_example, gen_while_example, gen_for_example,
-                gen_fv_cond_example, gen_fv_while_example, gen_fv_for_example]:
-
-        kwargs = {"include_cond_bufwrite": True}
-        run_tests(gen, kwargs=kwargs)
-
-        kwargs = {"include_cond_bufwrite": False}
-        run_tests(gen, kwargs=kwargs)
-
-    run_tests(gen_tautonly_linear_example)
-
-
 def _get_args():
     """Get command-line arguments"""
     separator = '\n' + "#" * 79 + '\n'
@@ -776,42 +541,40 @@ def _get_args():
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('outdir',
-        help=("(str) Path to directory to write instance.c files to. Must "
-              "exist before running"),
-        metavar="<path>")
+                        help=("(str) Path to directory to write instance.c files to. Must "
+                              "exist before running"),
+                        metavar="<path>")
 
     parser.add_argument('-num_instances',
-        help=("(int) Number of instance.c files to create; default "
-              "{}".format(DEFAULT_NUM_INSTANCES)),
-        default=DEFAULT_NUM_INSTANCES,
-        metavar="<int>")
+                        help=("(int) Number of instance.c files to create; default "
+                              "{}".format(DEFAULT_NUM_INSTANCES)),
+                        default=DEFAULT_NUM_INSTANCES,
+                        metavar="<int>")
 
     parser.add_argument('-seed',
-        help=("(int) Seed for random number generator, to reproduce results; "
-              "default {}. If -1 is passed, then use default Python "
-              "seed".format(DEFAULT_SEED)),
-        default=DEFAULT_SEED,
-        metavar="<int>")
+                        help=("(int) Seed for random number generator, to reproduce results; "
+                              "default {}. If -1 is passed, then use default Python "
+                              "seed".format(DEFAULT_SEED)),
+                        default=DEFAULT_SEED,
+                        metavar="<int>")
 
     parser.add_argument('-metadata_file',
-        help=("(str) Path to a file which shall be used to store simple "
-              "json metadata about the generated instances"),
-        metavar="<path>")
+                        help=("(str) Path to a file which shall be used to store simple "
+                              "json metadata about the generated instances"),
+                        metavar="<path>")
 
     parser.add_argument('--taut_only',
-        action='store_true',
-        help=("If passed, then generate examples with only flow-insensitive "
-              "buffer writes"))
+                        action='store_true',
+                        help=("If passed, then generate examples with only flow-insensitive "
+                              "buffer writes"))
 
     parser.add_argument('--linear_only',
-        action='store_true',
-        help="If passed, then generate only flow-insensitive linear examples")
+                        action='store_true',
+                        help="If passed, then generate only flow-insensitive linear examples")
 
     args = parser.parse_args()
     return args
 
-
-_test()
 
 if __name__ == '__main__':
     RET = main(_get_args())

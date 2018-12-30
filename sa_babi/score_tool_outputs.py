@@ -87,7 +87,7 @@ def load_alerts(alerts_path, whitelist):
 
 
 def is_unsafe_tag(tag):
-    return tag == Tag.BUFWRITE_COND_UNSAFE or tag == Tag.BUFWRITE_TAUT_UNSAFE
+    return tag == Tag.SIZE_T_COND_SAFE or tag == Tag.SIZE_T_COND_UNSAFE
 
 
 def load_tags(defects_path, validation_set=None, sound_only=False):
@@ -196,8 +196,8 @@ if __name__ == "__main__":
                               Tag(tag).name, other, instance, line)
 
     tag_sets = [
-        ("cond", Tag.BUFWRITE_COND_UNSAFE, Tag.BUFWRITE_COND_SAFE),
-        ("taut", Tag.BUFWRITE_TAUT_UNSAFE, Tag.BUFWRITE_TAUT_SAFE),
+        ("cond", Tag.SIZE_T_COND_SAFE, Tag.SIZE_T_COND_UNSAFE),
+        ("taut", Tag.SIZE_T_TAUT_SAFE, Tag.SIZE_T_TAUT_UNSAFE),
     ]
 
     writer = csv.writer(sys.stdout)
